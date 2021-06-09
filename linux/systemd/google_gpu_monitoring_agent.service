@@ -1,0 +1,16 @@
+[Unit]
+Description=GPU Utilization Metric Agent
+After=local-fs.target network-online.target
+Wants=local-fs.target network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+PIDFile=/run/gpu_monitoring_agent.pid
+ExecStart=pipenv run python main.py
+WorkingDirectory=/opt/google/compute-gpu-monitoring/linux
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target

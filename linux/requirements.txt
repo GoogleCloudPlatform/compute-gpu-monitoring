@@ -1,0 +1,2 @@
+requests == 2.25.1
+google-cloud-monitoring == 2.2.1
