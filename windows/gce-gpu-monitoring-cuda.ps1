@@ -23,13 +23,14 @@ to the metadata server (https=//cloud.google.com/compute/docs/storing-retrieving
  
  Param(
     #configure the interval, default is 5 and configure bigger than 5 to avoid throttling
-    $interval = 10,
+    [ValidateRange(5..[int]::MaxValue)]
+    [int]$interval = 10,
 
     #cuda is not supported yet
     [switch]$collect_each_core = $false
 )
 
-$nvidia_smi_path = "C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe"
+$nvidia_smi_path = "$env:ProgramFiles\NVIDIA Corporation\NVSMI\nvidia-smi.exe"
 $metadata_server = "http://metadata/computeMetadata/v1/instance/"
 $access_token_command = 'gcloud auth application-default print-access-token'
 
@@ -43,7 +44,7 @@ $gpu_metrics = @{
 }
 
 
-function get_metrics{
+function Get-NvidiaMetrics{
     <#
     Calls the nvidia-smi tool to retrieve usage metrics about the
     attached GPUs.
@@ -69,7 +70,7 @@ function get_metrics{
     
 }
 
-function get_timeseries_entry{
+function ConvertTo-TimeSeriesEntry{
     param(
         $metric_time, 
         $nvidia_metric,
@@ -111,7 +112,7 @@ function get_timeseries_entry{
     }
 }
 
-function check_nvidia_smi{
+function Test-NvidiaSMI{
     <#
     Checks if the nvidia-smi tool is installed and if it detects any GPUs.
     Prints message to stderr in case of errors.
@@ -119,13 +120,12 @@ function check_nvidia_smi{
     True if the nvidia-smi tool is available.
     #>
 
-    $installed = test-path -Path $nvidia_smi_path
-    if (-not($installed)){
+    if (-not(test-path -Path $nvidia_smi_path)){
         write-host -ForegroundColor Red "Couldn't find the nvidia-smi tool. Make sure it's properly installed in one of the directories in $nvidia_smi_path."
         return $false
     }
 
-    $result = & $nvidia_smi_path -L 
+    Start-Process -PassThru -FilePath $nvidia_smi_path -NoNewWindow -Wait 
     if ($LASTEXITCODE -ne 0){
         write-host -ForegroundColor Red "The nvidia-smi tool has encountered an error= "
         write-host -ForegroundColor Red "$result"
@@ -143,7 +143,7 @@ function check_nvidia_smi{
     return $true
 }
 
-function report_metrics{
+function Send-NvidiaMetrics{
     <#
     Reports a set of metrics to the Cloud Monitoring system.
     :param values: A dictionary mapping (gpu_type, gpu_bus_id) to a map of
@@ -160,7 +160,7 @@ function report_metrics{
     $data = @{'timeSeries'=@()}
 
     #gpu total
-    $now=(get-date).ToString("O")
+    $now=(Get-Date).ToUniversalTime().toString("O")
 
     # $gpu = get_nvidia_smi_utilization -metric_name "utilization.gpu"
     # $memory = get_nvidia_smi_utilization -metric_name "utilization.memory"
@@ -169,7 +169,7 @@ function report_metrics{
         $gpu = $key -split ","
 
         foreach($it in $metrics[$key].keys){
-            $data.timeSeries += get_timeseries_entry -metric_time $now -nvidia_metric $it -gcp_metric_name $gpu_metrics[$it] -value $metrics[$key][$it] -gpu_type $gpu[0] -gpu_bus_id $gpu[1]    
+            $data.timeSeries += ConvertTo-TimeSeriesEntry -metric_time $now -nvidia_metric $it -gcp_metric_name $gpu_metrics[$it] -value $metrics[$key][$it] -gpu_type $gpu[0] -gpu_bus_id $gpu[1]    
         }
     }
 
@@ -188,16 +188,16 @@ function report_metrics{
     catch{
         #if the token is expired, set it again and send the metrics
         $access_token = Invoke-Expression $access_token_command
-        $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-        $headers.Add("Authorization", "Bearer "+$access_token)
-        $headers.Add("Content-Type", 'application/json; charset=utf-8') 
-
-        $result=Invoke-RestMethod -Method Post -Headers $headers -Uri "https://monitoring.googleapis.com/v3/projects/$project_id/timeSeries" -Body $body    
+        $headers = @{
+            Authorization = "Bearer $access_token"
+        }
+        
+        $result=Invoke-RestMethod -Method Post -Headers $headers -ContentType 'application/json; charset=utf-8' -Uri "https://monitoring.googleapis.com/v3/projects/$project_id/timeSeries" -Body $body    
     }
 }
 
 
-if (-not (check_nvidia_smi)) {
+if (-not (Test-NvidiaSMI)) {
     write-host "nvidia-smi validation failed!"
     exit 1
 }
@@ -217,9 +217,9 @@ catch{
 
 while(1){
 
-    $metrics = get_metrics
+    $metrics = Get-NvidiaMetrics
 
-    report_metrics($metrics)
+    Send-NvidiaMetrics($metrics)
 
     
 
