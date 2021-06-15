@@ -127,7 +127,7 @@ function Test-NvidiaSMI{
 
     Start-Process -PassThru -FilePath $nvidia_smi_path -NoNewWindow -Wait 
     if ($LASTEXITCODE -ne 0){
-        write-host -ForegroundColor Red "The nvidia-smi tool has encountered an error= "
+        write-host -ForegroundColor Red "The nvidia-smi tool has encountered an error."
         write-host -ForegroundColor Red "$result"
         return $false
     }
