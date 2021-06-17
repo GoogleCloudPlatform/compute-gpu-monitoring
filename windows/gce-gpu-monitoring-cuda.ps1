@@ -21,9 +21,9 @@ This script assumes it is being executed on GCE instance and that it has access
 to the metadata server (https=//cloud.google.com/compute/docs/storing-retrieving-metadata).
 #>
  
- Param(
+Param(
     #configure the interval, default is 5 and configure bigger than 5 to avoid throttling
-    [ValidateRange(5,[int]::MaxValue)]
+    [ValidateRange(5, [int]::MaxValue)]
     [int]$interval = 10,
 
     #cuda is not supported yet
@@ -35,16 +35,16 @@ $metadata_server = "http://metadata/computeMetadata/v1/instance/"
 $access_token_command = 'gcloud auth application-default print-access-token'
 
 $gpu_metrics = @{
-    'utilization.gpu'= 'instance/gpu/utilization';
-    'utilization.memory'= 'instance/gpu/memory_utilization';
-    'memory.total'= 'instance/gpu/memory_total';
-    'memory.used'= 'instance/gpu/memory_used';
-    'memory.free'= 'instance/gpu/memory_free';
-    'temperature.gpu'= 'instance/gpu/temperature';
+    'utilization.gpu'    = 'instance/gpu/utilization';
+    'utilization.memory' = 'instance/gpu/memory_utilization';
+    'memory.total'       = 'instance/gpu/memory_total';
+    'memory.used'        = 'instance/gpu/memory_used';
+    'memory.free'        = 'instance/gpu/memory_free';
+    'temperature.gpu'    = 'instance/gpu/temperature';
 }
 
 
-function Get-NvidiaMetrics{
+function Get-NvidiaMetrics {
     <#
     Calls the nvidia-smi tool to retrieve usage metrics about the
     attached GPUs.
@@ -52,17 +52,17 @@ function Get-NvidiaMetrics{
     Dictionary that maps (gpu_type, gpu_bus_id) to metric values.
     #>
     
-    $query_params = 'gpu_name,gpu_bus_id,'+(($gpu_metrics.Keys|sort-object) -join ",")
+    $query_params = 'gpu_name,gpu_bus_id,' + (($gpu_metrics.Keys | sort-object) -join ",")
 
-    $result = & $nvidia_smi_path --query-gpu=$query_params --format=csv,nounits,noheader
+    $result = & $nvidia_smi_path --query-gpu=$query_params --format=csv, nounits, noheader
 
     $metric_name = $query_params -split ","
 
     $final = @{}
-    foreach($r in $result -split "\r?\n"){
+    foreach ($r in $result -split "\r?\n") {
         $r = ($r -split ",").trim()
-        for( $i =2;$i -lt $r.length;$i++){
-            $final[$r[0]+","+$r[1]]+=@{$metric_name[$i]=$r[$i]}
+        for ( $i = 2; $i -lt $r.length; $i++) {
+            $final[$r[0] + "," + $r[1]] += @{$metric_name[$i] = $r[$i] }
         }
     }
 
@@ -70,7 +70,7 @@ function Get-NvidiaMetrics{
     
 }
 
-function ConvertTo-TimeSeriesEntry{
+function ConvertTo-TimeSeriesEntry {
     param(
         $metric_time, 
         $nvidia_metric,
@@ -78,41 +78,41 @@ function ConvertTo-TimeSeriesEntry{
         $value,
         $gpu_bus_id,
         $gpu_type
-        )
+    )
 
 
-   @{'metric'=@{
-        'type'="custom.googleapis.com/$gcp_metric_name"
-        'labels'=@{
-            'gpu_type'= $gpu_type
-            'gpu_bus_id'= $gpu_bus_id
-        }
+    @{'metric'     = @{
+            'type'   = "custom.googleapis.com/$gcp_metric_name"
+            'labels' = @{
+                'gpu_type'   = $gpu_type
+                'gpu_bus_id' = $gpu_bus_id
+            }
         }
         
-    'resource'=@{
-        'type'='gce_instance'
-        'labels'=@{
-            'project_id'= $project_id
-            'instance_id'=$instance_id
-            'zone'=$zone
+        'resource' = @{
+            'type'   = 'gce_instance'
+            'labels' = @{
+                'project_id'  = $project_id
+                'instance_id' = $instance_id
+                'zone'        = $zone
             }
         }
 
-    'points' = @(
+        'points'   = @(
             @{
-                'interval'=@{
-                    'endTime'=$metric_time
-                    }
-                'value'=@{
-                    'int64Value'= $value
-                    }
+                'interval' = @{
+                    'endTime' = $metric_time
+                }
+                'value'    = @{
+                    'int64Value' = $value
+                }
                     
             }        
         )
     }
 }
 
-function Test-NvidiaSMI{
+function Test-NvidiaSMI {
     <#
     Checks if the nvidia-smi tool is installed and if it detects any GPUs.
     Prints message to stderr in case of errors.
@@ -120,13 +120,13 @@ function Test-NvidiaSMI{
     True if the nvidia-smi tool is available.
     #>
 
-    if (-not(test-path -Path $nvidia_smi_path)){
+    if (-not(test-path -Path $nvidia_smi_path)) {
         write-host -ForegroundColor Red "Couldn't find the nvidia-smi tool. Make sure it's properly installed in one of the directories in $nvidia_smi_path."
         return $false
     }
 
     Start-Process -PassThru -FilePath $nvidia_smi_path -NoNewWindow -Wait 
-    if ($LASTEXITCODE -ne 0){
+    if ($LASTEXITCODE -ne 0) {
         write-host -ForegroundColor Red "The nvidia-smi tool has encountered an error."
         write-host -ForegroundColor Red "$result"
         return $false
@@ -143,7 +143,7 @@ function Test-NvidiaSMI{
     return $true
 }
 
-function Send-NvidiaMetrics{
+function Send-NvidiaMetrics {
     <#
     Reports a set of metrics to the Cloud Monitoring system.
     :param values: A dictionary mapping (gpu_type, gpu_bus_id) to a map of
@@ -157,18 +157,18 @@ function Send-NvidiaMetrics{
         $metrics
     )
 
-    $data = @{'timeSeries'=@()}
+    $data = @{'timeSeries' = @() }
 
     #gpu total
-    $now=(Get-Date).ToUniversalTime().toString("O")
+    $now = (Get-Date).ToUniversalTime().toString("O")
 
     # $gpu = get_nvidia_smi_utilization -metric_name "utilization.gpu"
     # $memory = get_nvidia_smi_utilization -metric_name "utilization.memory"
     
-    foreach ($key in $metrics.keys){
+    foreach ($key in $metrics.keys) {
         $gpu = $key -split ","
 
-        foreach($it in $metrics[$key].keys){
+        foreach ($it in $metrics[$key].keys) {
             $data.timeSeries += ConvertTo-TimeSeriesEntry -metric_time $now -nvidia_metric $it -gcp_metric_name $gpu_metrics[$it] -value $metrics[$key][$it] -gpu_type $gpu[0] -gpu_bus_id $gpu[1]    
         }
     }
@@ -182,17 +182,17 @@ function Send-NvidiaMetrics{
     $body = $data | ConvertTo-Json -Depth 6
 
     $body
-    try{
-        $result=Invoke-RestMethod -Method Post -Headers $headers -Uri "https=//monitoring.googleapis.com/v3/projects/$project_id/timeSeries" -Body $body    
+    try {
+        $result = Invoke-RestMethod -Method Post -Headers $headers -Uri "https=//monitoring.googleapis.com/v3/projects/$project_id/timeSeries" -Body $body    
     }
-    catch{
+    catch {
         #if the token is expired, set it again and send the metrics
         $access_token = Invoke-Expression $access_token_command
         $headers = @{
             Authorization = "Bearer $access_token"
         }
         
-        $result=Invoke-RestMethod -Method Post -Headers $headers -ContentType 'application/json; charset=utf-8' -Uri "https://monitoring.googleapis.com/v3/projects/$project_id/timeSeries" -Body $body    
+        $result = Invoke-RestMethod -Method Post -Headers $headers -ContentType 'application/json; charset=utf-8' -Uri "https://monitoring.googleapis.com/v3/projects/$project_id/timeSeries" -Body $body    
     }
 }
 
@@ -203,19 +203,19 @@ if (-not (Test-NvidiaSMI)) {
 }
 
 # Get zone, project id, instance id and token from METADATA server
-try{
-    $metadata = Invoke-RestMethod -Uri $metadata_server'zone' -Headers @{'Metadata-Flavor' = 'Google'}
+try {
+    $metadata = Invoke-RestMethod -Uri $metadata_server'zone' -Headers @{'Metadata-Flavor' = 'Google' }
     $zone = $metadata.split("/")[3]
     $project_id = $metadata.split("/")[1].Tostring()
-    $instance_id = (Invoke-RestMethod -Uri $metadata_server'id'  -Headers @{'Metadata-Flavor' = 'Google'}).tostring()
+    $instance_id = (Invoke-RestMethod -Uri $metadata_server'id'  -Headers @{'Metadata-Flavor' = 'Google' }).tostring()
 }
-catch{
+catch {
     write-host -ForegroundColor RED "Couldn't connect with the metadata server. Are you sure you are executing this script on Google Compute Engine instance?"
     exit 2 
 }
 
 
-while(1){
+while (1) {
 
     $metrics = Get-NvidiaMetrics
 
