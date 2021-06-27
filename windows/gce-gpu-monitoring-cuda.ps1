@@ -54,7 +54,7 @@ function Get-NvidiaMetrics {
     
     $query_params = 'gpu_name,gpu_bus_id,' + (($gpu_metrics.Keys | sort-object) -join ",")
 
-    $result = & $nvidia_smi_path --query-gpu=$query_params --format=csv, nounits, noheader
+    $result = & $nvidia_smi_path --query-gpu=$query_params --format=csv,nounits,noheader
 
     $metric_name = $query_params -split ","
 
