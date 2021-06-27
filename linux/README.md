@@ -108,9 +108,7 @@ $ ./venv/bin/python main.py
 
 
 ## Testing
-Just start the monitoring script, start the load generator and visit your
-[Cloud Monitoring metrics explorer](https://console.cloud.google.com/monitoring/metrics-explorer)
-to look for metrics like `custom.googleapis.com/instance/gpu/utilization`.
+You can check if the script correctly gathers usage data about your GPU by using a third party load testing tool like gpu_burn. Just start the monitoring script, start the load generator and visit your Cloud Monitoring metrics explorer to look for metrics like custom.googleapis.com/instance/gpu/utilization.
 
 ## Collected metrics
 The script gathers following metrics:
