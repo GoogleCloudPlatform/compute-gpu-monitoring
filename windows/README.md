@@ -31,7 +31,7 @@ You can download the monitoring agent directly from GitHub repository with:
 # you have to have a privilege to create the folder and register the task so that the script runs automatically when the VM restarts.
 mkdir c:\google-scripts
 cd c:\google-scripts
-invoke-webrequest -uri https://raw.githubusercontent.com/GoogleCloudPlatform/compute-gpu-monitoring/main/windows/gce-gpu-monitoring-cuda.ps1 -outfile gce-gpu-monitoring-cuda.ps1
+Invoke-Webrequest -uri https://raw.githubusercontent.com/GoogleCloudPlatform/compute-gpu-monitoring/main/windows/gce-gpu-monitoring-cuda.ps1 -outfile gce-gpu-monitoring-cuda.ps1
 ```
 
 ### Starting the agent on system boot
@@ -43,7 +43,7 @@ You have to have the administrator privilege to register the task.
 $Trigger= New-ScheduledTaskTrigger -AtStartup
 $User= "NT AUTHORITY\SYSTEM" 
 $Action= New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "C:\google-scripts\gce-gpu-monitoring-cuda.ps1" 
-Register-ScheduledTask -TaskName "MonitoringGPUs" -Trigger $Trigger -User $User -Action $Action -RunLevel Highest –Force 
+Register-ScheduledTask -TaskName "MonitoringGPUs" -Trigger $Trigger -User $User -Action $Action –Force 
 
 ```
 
