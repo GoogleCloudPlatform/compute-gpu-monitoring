@@ -41,9 +41,14 @@ You have to have the administrator privilege to register the task.
 ```powershell
 # Creating Scheduled tasks
 $Trigger= New-ScheduledTaskTrigger -AtStartup
+$Trigger.ExecutionTimeLimit = "PT0S"
 $User= "NT AUTHORITY\SYSTEM" 
 $Action= New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "C:\google-scripts\gce-gpu-monitoring-cuda.ps1" 
-Register-ScheduledTask -TaskName "MonitoringGPUs" -Trigger $Trigger -User $User -Action $Action –Force 
+$settingsSet = New-ScheduledTaskSettingsSet
+# Set the Execution Time Limit to unlimited on all versions of Windows Server
+$settingsSet.ExecutionTimeLimit = 'PT0S'
+Register-ScheduledTask -TaskName "MonitoringGPUs" -Trigger $Trigger -User $User -Action $Action –Force -Settings $settingsSet 
+
 
 ```
 
