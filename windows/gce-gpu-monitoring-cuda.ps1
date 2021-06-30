@@ -22,8 +22,8 @@ to the metadata server (https://cloud.google.com/compute/docs/storing-retrieving
 #>
  
 Param(
-    #configure the interval, default is 5 and configure bigger than 5 to avoid throttling
-    [ValidateRange(5, [int]::MaxValue)]
+    #configure the interval, default is 10 and configure bigger than 10 to avoid throttling
+    [ValidateRange(10, [int]::MaxValue)]
     [int]$interval = 10,
 
     #cuda is not supported yet
