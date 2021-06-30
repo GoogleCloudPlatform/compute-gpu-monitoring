@@ -15,7 +15,7 @@
 <#
 This script can be used for monitoring  GPU utilization on Google Compute Engine
 instances with GPUs attached. It requires the nvidia-smi tool to be properly
-installed on the system (https=//developer.nvidia.com/nvidia-system-management-interface).
+installed on the system (https://developer.nvidia.com/nvidia-system-management-interface).
 
 This script assumes it is being executed on GCE instance and that it has access
 to the metadata server (https=//cloud.google.com/compute/docs/storing-retrieving-metadata).
