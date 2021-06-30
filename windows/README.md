@@ -19,7 +19,7 @@ driver installation instructions in our
 ## Installation
 
 This instruction assumes installation in `C:\Program Files\NVIDIA Corporation` directory.
-If you change the directory the `nvidia-smi` tool is installed, you have to update your script to be downloaded.
+If you change the directory the `nvidia-smi` tool is in installed, you have to update your script to use this new directory.
 
 ### Downloading the agent
 
