@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
- 
+
 <#
 This script can be used for monitoring  GPU utilization on Google Compute Engine
 instances with GPUs attached. It requires the nvidia-smi tool to be properly
@@ -20,7 +20,7 @@ installed on the system (https://developer.nvidia.com/nvidia-system-management-i
 This script assumes it is being executed on GCE instance and that it has access
 to the metadata server (https://cloud.google.com/compute/docs/storing-retrieving-metadata).
 #>
- 
+
 Param(
     #configure the interval, default is 10 and configure bigger than 10 to avoid throttling
     [ValidateRange(10, [int]::MaxValue)]
@@ -51,7 +51,7 @@ function Get-NvidiaMetrics {
     :return:
     Dictionary that maps (gpu_type, gpu_bus_id) to metric values.
     #>
-    
+
     $query_params = 'gpu_name,gpu_bus_id,' + (($gpu_metrics.Keys | sort-object) -join ",")
 
     $result = & $nvidia_smi_path --query-gpu=$query_params --format=csv,nounits,noheader
@@ -67,12 +67,11 @@ function Get-NvidiaMetrics {
     }
 
     return $final
-    
 }
 
 function ConvertTo-TimeSeriesEntry {
     param(
-        $metric_time, 
+        $metric_time,
         $nvidia_metric,
         $gcp_metric_name,
         $value,
@@ -88,7 +87,7 @@ function ConvertTo-TimeSeriesEntry {
                 'gpu_bus_id' = $gpu_bus_id
             }
         }
-        
+
         'resource' = @{
             'type'   = 'gce_instance'
             'labels' = @{
@@ -104,10 +103,9 @@ function ConvertTo-TimeSeriesEntry {
                     'endTime' = $metric_time
                 }
                 'value'    = @{
-                    'int64Value' = $value
+                    'doubleValue' = $value
                 }
-                    
-            }        
+            }
         )
     }
 }
@@ -125,21 +123,21 @@ function Test-NvidiaSMI {
         return $false
     }
 
-    Start-Process -PassThru -FilePath $nvidia_smi_path -NoNewWindow -Wait 
+    Start-Process -PassThru -FilePath $nvidia_smi_path -NoNewWindow -Wait
     if ($LASTEXITCODE -ne 0) {
         write-host -ForegroundColor Red "The nvidia-smi tool has encountered an error."
         write-host -ForegroundColor Red "$result"
         return $false
     }
 
-    <# 
+    <#
     $no_cards = $result|Measure-Object -Line
     if ( $no_cards -eq 0 ){
         Write-host -ForegroundColor RED "The nvidia-smi tool didn't detect any GPUs attached to the system."
         return $false
     }
     #>
-    
+
     return $true
 }
 
@@ -164,26 +162,22 @@ function Send-NvidiaMetrics {
 
     # $gpu = get_nvidia_smi_utilization -metric_name "utilization.gpu"
     # $memory = get_nvidia_smi_utilization -metric_name "utilization.memory"
-    
+
     foreach ($key in $metrics.keys) {
         $gpu = $key -split ","
 
         foreach ($it in $metrics[$key].keys) {
-            $data.timeSeries += ConvertTo-TimeSeriesEntry -metric_time $now -nvidia_metric $it -gcp_metric_name $gpu_metrics[$it] -value $metrics[$key][$it] -gpu_type $gpu[0] -gpu_bus_id $gpu[1]    
+            $data.timeSeries += ConvertTo-TimeSeriesEntry -metric_time $now -nvidia_metric $it -gcp_metric_name $gpu_metrics[$it] -value $metrics[$key][$it] -gpu_type $gpu[0] -gpu_bus_id $gpu[1]
         }
     }
 
-
-
-    
     # $data.timeSeries += get_timeseries_entry -metric_time $now -nvidia_metric "utilization.memory" -gcp_metric_name "gpu_memory_utilization"
-
 
     $body = $data | ConvertTo-Json -Depth 6
 
     $body
     try {
-        $result = Invoke-RestMethod -Method Post -Headers $headers -Uri "https=//monitoring.googleapis.com/v3/projects/$project_id/timeSeries" -Body $body    
+        $result = Invoke-RestMethod -Method Post -Headers $headers -Uri "https=//monitoring.googleapis.com/v3/projects/$project_id/timeSeries" -Body $body
     }
     catch {
         #if the token is expired, set it again and send the metrics
@@ -191,8 +185,8 @@ function Send-NvidiaMetrics {
         $headers = @{
             Authorization = "Bearer $access_token"
         }
-        
-        $result = Invoke-RestMethod -Method Post -Headers $headers -ContentType 'application/json; charset=utf-8' -Uri "https://monitoring.googleapis.com/v3/projects/$project_id/timeSeries" -Body $body    
+
+        $result = Invoke-RestMethod -Method Post -Headers $headers -ContentType 'application/json; charset=utf-8' -Uri "https://monitoring.googleapis.com/v3/projects/$project_id/timeSeries" -Body $body
     }
 }
 
@@ -211,17 +205,14 @@ try {
 }
 catch {
     write-host -ForegroundColor RED "Couldn't connect with the metadata server. Are you sure you are executing this script on Google Compute Engine instance?"
-    exit 2 
+    exit 2
 }
 
 
 while (1) {
-
     $metrics = Get-NvidiaMetrics
 
     Send-NvidiaMetrics($metrics)
 
-    
-
     start-sleep -Seconds $interval
-} 
+}
