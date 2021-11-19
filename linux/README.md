@@ -11,9 +11,8 @@ To run this script you need to meet the following criteria:
 * It can be run only on Google Compute Engine machines.
 * It requires Python version >= 3.6.
 * It requires the `nvidia-smi` tool to be properly installed.
-* You need `pipenv` or some other virtual environment manager to
- install the script dependencies.
-* You need to have Cloud Monitoring dashboard created. This is automatically done on your first visit on the [Cloud Monitoring page](https://console.cloud.google.com/monitoring) in the Cloud Console.
+* You need to have Cloud Monitoring dashboard created. This is automatically done on your first visit on the 
+  [Cloud Monitoring page](https://console.cloud.google.com/monitoring) in the Cloud Console.
 
 The `nvidia-smi` tool is installed by default if you follow the
 driver installation instructions in our 
@@ -42,9 +41,10 @@ latest version of the script:
 
 ```bash
 sudo mkdir -p /opt/google
-sudo wget https://github.com/GoogleCloudPlatform/compute-gpu-monitoring/archive/refs/heads/main.zip /opt/google
+sudo curl -L https://github.com/GoogleCloudPlatform/compute-gpu-monitoring/archive/refs/heads/main.zip --output /opt/google/main.zip
 cd /opt/google
 sudo unzip main.zip
+sudo mv compute-gpu-monitoring-main compute-gpu-monitoring
 sudo chmod -R 755 compute-gpu-monitoring
 sudo rm main.zip
 ```
@@ -72,7 +72,8 @@ virtual environment yourself:
 
 ```bash
 cd /opt/google/compute-gpu-monitoring/linux
-sudo virtualenv -p python3 venv
+sudo python3 -m venv venv
+sudo venv/bin/pip install wheel
 sudo venv/bin/pip install -Ur requirements.txt
 ```
 
