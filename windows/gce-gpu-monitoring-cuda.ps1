@@ -30,7 +30,7 @@ Param(
     [switch]$collect_each_core = $false
 )
 
-$nvidia_smi_path = "$env:ProgramFiles\NVIDIA Corporation\NVSMI\nvidia-smi.exe"
+$nvidia_smi_path = (gcm nvidia-smi).Source
 $metadata_server = "http://metadata/computeMetadata/v1/instance/"
 $access_token_command = 'gcloud auth application-default print-access-token'
 
