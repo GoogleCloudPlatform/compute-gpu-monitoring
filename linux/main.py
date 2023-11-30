@@ -20,6 +20,7 @@ This script assumes it is being executed on GCE instance and that it has access
 to the metadata server (https://cloud.google.com/compute/docs/storing-retrieving-metadata).
 """
 import copy
+import itertools
 import subprocess
 import sys
 import time
@@ -53,6 +54,7 @@ METRICS = {
     'memory.free': 'instance/gpu/memory_free',
     'temperature.gpu': 'instance/gpu/temperature',
 }
+MEM_USED_PERCENT = 'instance/gpu/memory_used_percent'
 
 # Type description of dictionary mapping a pair of (gpu_type, gpu_bus_id) to
 # dictionary of metrics for given GPU.
@@ -110,9 +112,13 @@ def report_metrics(values: MetricsData, project_id: str, zone: str,
 
     series = []
     for (gpu_type, gpu_bus_id), metrics in values.items():
-        for smi_metric, gcp_metric in METRICS.items():
+        for smi_metric, gcp_metric in itertools.chain(METRICS.items(), (('', MEM_USED_PERCENT),)):
             new_series = copy.deepcopy(time_series)
-            new_series.points[0].value.double_value = metrics[smi_metric]
+            if gcp_metric == MEM_USED_PERCENT:
+                # We manually calculate the percentage of memory used
+                new_series.points[0].value.double_value = round(metrics['memory.used'] / metrics['memory.total'] * 100)
+            else:
+                new_series.points[0].value.double_value = metrics[smi_metric]
             new_series.metric.type = 'custom.googleapis.com/{}'.format(gcp_metric)
             new_series.metric.labels['gpu_type'] = gpu_type
             new_series.metric.labels['gpu_bus_id'] = gpu_bus_id

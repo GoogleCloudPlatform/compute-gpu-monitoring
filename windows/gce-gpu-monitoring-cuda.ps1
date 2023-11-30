@@ -43,6 +43,16 @@ $gpu_metrics = @{
     'temperature.gpu'    = 'instance/gpu/temperature';
 }
 
+$gpu_metrics_full = @{
+    'utilization.gpu'    = 'instance/gpu/utilization';
+    'utilization.memory' = 'instance/gpu/memory_utilization';
+    'memory.total'       = 'instance/gpu/memory_total';
+    'memory.used'        = 'instance/gpu/memory_used';
+    'memory.free'        = 'instance/gpu/memory_free';
+    'temperature.gpu'    = 'instance/gpu/temperature';
+    'memory.used_percent' = 'instance/gpu/memory_used_percent';
+}
+
 
 function Get-NvidiaMetrics {
     <#
@@ -64,6 +74,7 @@ function Get-NvidiaMetrics {
         for ( $i = 2; $i -lt $r.length; $i++) {
             $final[$r[0] + "," + $r[1]] += @{$metric_name[$i] = $r[$i] }
         }
+        $final[$r[0] + "," + $r[1]] += @{'memory.used_percent' = [Math]::Round(($r[4] / $r[3]) * 100).toString()}
     }
 
     return $final
@@ -167,7 +178,7 @@ function Send-NvidiaMetrics {
         $gpu = $key -split ","
 
         foreach ($it in $metrics[$key].keys) {
-            $data.timeSeries += ConvertTo-TimeSeriesEntry -metric_time $now -nvidia_metric $it -gcp_metric_name $gpu_metrics[$it] -value $metrics[$key][$it] -gpu_type $gpu[0] -gpu_bus_id $gpu[1]
+            $data.timeSeries += ConvertTo-TimeSeriesEntry -metric_time $now -nvidia_metric $it -gcp_metric_name $gpu_metrics_full[$it] -value $metrics[$key][$it] -gpu_type $gpu[0] -gpu_bus_id $gpu[1]
         }
     }
 
@@ -177,7 +188,7 @@ function Send-NvidiaMetrics {
 
     $body
     try {
-        $result = Invoke-RestMethod -Method Post -Headers $headers -Uri "https=//monitoring.googleapis.com/v3/projects/$project_id/timeSeries" -Body $body
+        $result = Invoke-RestMethod -Method Post -Headers $headers -Uri "https://monitoring.googleapis.com/v3/projects/$project_id/timeSeries" -Body $body
     }
     catch {
         #if the token is expired, set it again and send the metrics

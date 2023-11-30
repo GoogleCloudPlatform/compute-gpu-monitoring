@@ -76,6 +76,7 @@ The script gathers following metrics:
 * **custom.googleapis.com/instance/gpu/memory_used** - Used memory of the GPU card.
 * **custom.googleapis.com/instance/gpu/memory_free** - Available memory of the GPU card.
 * **custom.googleapis.com/instance/gpu/temperature** - Temperature of the GPU.
+* **custom.googleapis.com/instance/gpu/memory_used_percent** - The percentage of total GPU memory used. 
 
 ### Metrics labels
 
